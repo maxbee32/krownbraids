@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { EnvelopeIcon, KeyIcon, ShieldCheckIcon, BuildingOfficeIcon, XMarkIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { 
+  EnvelopeIcon, 
+  KeyIcon, 
+  ShieldCheckIcon, 
+  ScissorsIcon, 
+  XMarkIcon, 
+  EyeIcon, 
+  EyeSlashIcon 
+} from "@heroicons/react/24/outline";
 import ThreeScene from "./components/ThreeScene";
 
 export default function Home() {
@@ -44,10 +52,6 @@ export default function Home() {
     setAlert(null);
 
     try {
-      console.log("=== Login Attempt ===");
-      console.log("Email:", email);
-      console.log("Password length:", password.length);
-
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -59,17 +63,12 @@ export default function Home() {
         }),
       });
 
-      console.log("Response status:", response.status);
-      
-      // Get raw response first
       const rawResponse = await response.text();
-      console.log("Raw response:", rawResponse);
-
+      
       let data;
       try {
         data = JSON.parse(rawResponse);
       } catch (parseError) {
-        console.error("Failed to parse JSON:", parseError);
         showAlert('error', 'Server returned invalid response. Please try again.');
         setLoading(false);
         return;
@@ -78,7 +77,6 @@ export default function Home() {
       if (response.ok) {
         if (data.token) {
           localStorage.setItem('adminToken', data.token);
-          console.log("Token stored successfully");
         } else {
           showAlert('error', 'No token received from server');
           setLoading(false);
@@ -101,7 +99,6 @@ export default function Home() {
           }, 1500);
         }
       } else {
-        // Handle specific status codes
         let errorMessage = data.message || data.error || 'Login failed. Please try again.';
         
         if (response.status === 401) {
@@ -116,15 +113,10 @@ export default function Home() {
         setLoading(false);
       }
     } catch (error) {
-      console.error("Login error:", error);
-      if (error instanceof Error) {
-        if (error.message === "Failed to fetch") {
-          showAlert('error', 'Cannot connect to server. Please check:\n1. Backend is running on port 8081\n2. Your internet connection');
-        } else {
-          showAlert('error', error.message || 'An unexpected error occurred');
-        }
+      if (error instanceof Error && error.message === "Failed to fetch") {
+        showAlert('error', 'Cannot connect to server. Please check your connection.');
       } else {
-        showAlert('error', 'Network error. Please check your connection.');
+        showAlert('error', 'An unexpected error occurred. Please try again.');
       }
       setLoading(false);
     }
@@ -160,63 +152,63 @@ export default function Home() {
     <>
       <AlertPortal />
 
-      <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 p-3 sm:p-4 md:p-6">
+      <div className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 p-4 sm:p-4 md:p-6">
         <ThreeScene />
 
-        <div className="relative z-10 w-[95%] sm:w-[85%] md:w-[75%] lg:w-[55%] xl:w-[45%] 2xl:w-[35%] max-w-[95%] sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto rounded-2xl sm:rounded-3xl bg-white/5 backdrop-blur-md shadow-2xl border border-white/10 p-4 sm:p-5 md:p-6 lg:p-8">
+        <div className="relative z-10 w-[92%] sm:w-[85%] md:w-[75%] lg:w-[55%] xl:w-[45%] 2xl:w-[35%] max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto rounded-2xl sm:rounded-3xl bg-white/5 backdrop-blur-md shadow-2xl border border-white/10 p-5 sm:p-5 md:p-6 lg:p-8">
           
           {/* Admin Badge */}
           <div className="absolute -top-2 right-3 sm:right-4 md:right-6">
-            <span className="inline-flex items-center rounded-full bg-blue-500/20 px-2 py-0.5 sm:px-2.5 sm:py-0.5 text-[7px] sm:text-[9px] font-medium text-blue-300 border border-blue-400/30 backdrop-blur-sm">
-              <ShieldCheckIcon className="h-2 w-2 sm:h-2.5 sm:w-2.5 mr-1" />
+            <span className="inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-1 sm:px-2.5 sm:py-0.5 text-[10px] sm:text-[9px] font-medium text-blue-300 border border-blue-400/30 backdrop-blur-sm">
+              <ShieldCheckIcon className="h-2.5 w-2.5 sm:h-2.5 sm:w-2.5 mr-1" />
               Admin
             </span>
           </div>
 
-          {/* Logo/Brand */}
-          <div className="flex flex-col items-center justify-center mb-1.5 sm:mb-2 md:mb-2.5">
-            <div className="flex h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 lg:h-16 lg:w-16 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 shadow-lg shadow-blue-500/30 border border-white/10">
-              <BuildingOfficeIcon className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-white" />
+          {/* Logo/Brand - Using Scissors Icon */}
+          <div className="flex flex-col items-center justify-center mb-3 sm:mb-2 md:mb-2.5">
+            <div className="flex h-14 w-14 sm:h-12 sm:w-12 md:h-14 md:w-14 lg:h-16 lg:w-16 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 shadow-lg shadow-blue-500/30 border border-white/10">
+              <ScissorsIcon className="h-7 w-7 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-white" />
             </div>
-            <div className="mt-0.5 sm:mt-1 text-center">
-              <h1 className="text-[10px] sm:text-xs md:text-sm font-bold text-white/80 tracking-wider">
+            <div className="mt-1.5 sm:mt-1 text-center">
+              <h1 className="text-sm sm:text-xs md:text-sm font-bold text-white/80 tracking-wider">
                 KROWNBRAIDS
               </h1>
-              <p className="text-[6px] sm:text-[8px] text-blue-300/50 tracking-[0.2em] uppercase">
+              <p className="text-[9px] sm:text-[8px] text-blue-300/50 tracking-[0.2em] uppercase">
                 Admin Portal
               </p>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="relative my-1.5 sm:my-2">
+          <div className="relative my-2 sm:my-2">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/10"></div>
             </div>
           </div>
 
           {/* Header */}
-          <div className="text-center mb-2 sm:mb-2.5 md:mb-3 lg:mb-4">
-            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white tracking-tight">
+          <div className="text-center mb-3 sm:mb-2.5 md:mb-3 lg:mb-4">
+            <h2 className="text-lg sm:text-lg md:text-xl lg:text-2xl font-bold text-white tracking-tight">
               Admin Sign In
             </h2>
-            <p className="mt-0.5 text-[9px] sm:text-[10px] md:text-xs text-blue-200/70">
+            <p className="mt-1 text-xs sm:text-[10px] md:text-xs text-blue-200/70">
               Enter your credentials to access the dashboard
             </p>
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-1.5 sm:space-y-2 md:space-y-2.5">
+          <form onSubmit={handleLogin} className="space-y-2.5 sm:space-y-2 md:space-y-2.5">
             {/* Email Input */}
             <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-2.5">
-                <EnvelopeIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-300/50" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-2.5">
+                <EnvelopeIcon className="h-4 w-4 sm:h-4 sm:w-4 text-blue-300/50" />
               </div>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg sm:rounded-xl border-0 bg-white/10 px-2.5 sm:px-3 py-1.5 sm:py-2 md:py-2.5 pl-7 sm:pl-8 text-xs sm:text-sm text-white placeholder:text-blue-200/40 focus:ring-2 focus:ring-blue-400/50 focus:outline-none transition-all duration-200 disabled:opacity-50"
+                className="w-full rounded-lg sm:rounded-xl border-0 bg-white/10 px-3 sm:px-3 py-2.5 sm:py-2 md:py-2.5 pl-9 sm:pl-8 text-sm sm:text-sm text-white placeholder:text-blue-200/40 focus:ring-2 focus:ring-blue-400/50 focus:outline-none transition-all duration-200 disabled:opacity-50"
                 placeholder="admin@krownbraids.com"
                 inputMode="email"
                 autoComplete="email"
@@ -227,14 +219,14 @@ export default function Home() {
 
             {/* Password Input with Eye Toggle */}
             <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-2.5">
-                <KeyIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-300/50" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-2.5">
+                <KeyIcon className="h-4 w-4 sm:h-4 sm:w-4 text-blue-300/50" />
               </div>
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg sm:rounded-xl border-0 bg-white/10 px-2.5 sm:px-3 py-1.5 sm:py-2 md:py-2.5 pl-7 sm:pl-8 pr-8 sm:pr-9 text-xs sm:text-sm text-white placeholder:text-blue-200/40 focus:ring-2 focus:ring-blue-400/50 focus:outline-none transition-all duration-200 disabled:opacity-50"
+                className="w-full rounded-lg sm:rounded-xl border-0 bg-white/10 px-3 sm:px-3 py-2.5 sm:py-2 md:py-2.5 pl-9 sm:pl-8 pr-10 sm:pr-9 text-sm sm:text-sm text-white placeholder:text-blue-200/40 focus:ring-2 focus:ring-blue-400/50 focus:outline-none transition-all duration-200 disabled:opacity-50"
                 placeholder="Enter your password"
                 autoComplete="current-password"
                 disabled={loading}
@@ -243,24 +235,24 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-2.5 text-blue-300/40 hover:text-blue-300/70 transition-colors"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-2.5 text-blue-300/40 hover:text-blue-300/70 transition-colors"
               >
                 {showPassword ? (
-                  <EyeSlashIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <EyeSlashIcon className="h-4 w-4 sm:h-4 sm:w-4" />
                 ) : (
-                  <EyeIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <EyeIcon className="h-4 w-4 sm:h-4 sm:w-4" />
                 )}
               </button>
             </div>
 
             {/* Remember Me */}
             <div className="flex items-center justify-between">
-              <label className="flex cursor-pointer items-center gap-1 sm:gap-1.5 text-blue-200/60 hover:text-white transition-colors">
+              <label className="flex cursor-pointer items-center gap-1.5 sm:gap-1.5 text-blue-200/60 hover:text-white transition-colors">
                 <input 
                   type="checkbox" 
-                  className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded border-blue-400/30 bg-white/10 text-blue-500 focus:ring-blue-400 focus:ring-offset-0" 
+                  className="h-3 w-3 sm:h-3 sm:w-3 rounded border-blue-400/30 bg-white/10 text-blue-500 focus:ring-blue-400 focus:ring-offset-0" 
                 />
-                <span className="text-[9px] sm:text-xs">Keep me signed in</span>
+                <span className="text-xs sm:text-xs">Keep me signed in</span>
               </label>
             </div>
 
@@ -268,7 +260,7 @@ export default function Home() {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-1.5 sm:py-2 md:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-2.5 sm:py-2 md:py-2.5 text-sm sm:text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 sm:gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <>
@@ -280,7 +272,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <ShieldCheckIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <ShieldCheckIcon className="h-4 w-4 sm:h-4 sm:w-4" />
                   Access Dashboard
                 </>
               )}
@@ -288,8 +280,8 @@ export default function Home() {
           </form>
 
           {/* Admin Footer */}
-          <div className="mt-2 sm:mt-2.5 md:mt-3 text-center">
-            <p className="text-[7px] sm:text-[9px] text-blue-300/30 tracking-widest uppercase">
+          <div className="mt-3 sm:mt-2.5 md:mt-3 text-center">
+            <p className="text-[9px] sm:text-[9px] text-blue-300/30 tracking-widest uppercase">
               🔒 Secure • Encrypted • Admin Only
             </p>
           </div>
