@@ -10,7 +10,8 @@ import {
   XMarkIcon, 
   CheckCircleIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import ThreeScene from "../components/ThreeScene";
 
@@ -22,6 +23,7 @@ export default function ChangePasswordPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -106,7 +108,6 @@ export default function ChangePasswordPage() {
     try {
       const token = localStorage.getItem('adminToken');
       
-      // Send oldPassword and newPassword to match backend DTO
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: {
@@ -158,7 +159,32 @@ export default function ChangePasswordPage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    setLogoutLoading(true);
+    setAlert(null);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      if (token) {
+        // Call the logout API
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        if (!response.ok) {
+          console.error("Logout API error:", await response.text());
+        }
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+
+    // Always clear local storage and redirect, even if API fails
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminData');
     router.push("/");
@@ -247,7 +273,9 @@ export default function ChangePasswordPage() {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/10"></div>
             </div>
-           
+            <div className="relative flex justify-center">
+              <span className="bg-transparent px-2 text-[7px] sm:text-[9px] text-yellow-300/40">PASSWORD UPDATE REQUIRED</span>
+            </div>
           </div>
 
           {/* Header */}
@@ -395,9 +423,23 @@ export default function ChangePasswordPage() {
               <button 
                 type="button"
                 onClick={handleLogout}
-                className="flex-1 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 py-1.5 sm:py-2 md:py-2.5 text-xs sm:text-sm font-medium text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
+                disabled={logoutLoading}
+                className="flex-1 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 py-1.5 sm:py-2 md:py-2.5 text-xs sm:text-sm font-medium text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
               >
-                Logout
+                {logoutLoading ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white/60" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Logging out...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    Logout
+                  </>
+                )}
               </button>
               <button 
                 type="submit"

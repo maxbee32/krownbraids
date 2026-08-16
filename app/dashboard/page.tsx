@@ -24,6 +24,10 @@ import {
   XMarkIcon,
   PlusIcon,
   EyeIcon,
+  ArrowRightOnRectangleIcon,
+  UserPlusIcon,
+  TagIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 import ThreeScene from "../components/ThreeScene";
@@ -31,9 +35,10 @@ import ThreeScene from "../components/ThreeScene";
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [adminName, setAdminName] = useState("Admin");
+  const [adminName, setAdminName] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   // Navigation items
   const navItems = [
@@ -42,6 +47,9 @@ export default function DashboardPage() {
     { name: "Salons", icon: BuildingOfficeIcon, href: "/dashboard/salons", current: false },
     { name: "Suppliers", icon: TruckIcon, href: "/dashboard/suppliers", current: false },
     { name: "Customers", icon: UserGroupIcon, href: "/dashboard/customers", current: false },
+    { name: "Users", icon: UserPlusIcon, href: "/dashboard/users", current: false },
+    { name: "Categories", icon: TagIcon, href: "/dashboard/categories", current: false },
+    { name: "Subscriptions", icon: CreditCardIcon, href: "/dashboard/subscriptions", current: false },
     { name: "Admin", icon: Cog6ToothIcon, href: "/dashboard/admin", current: false },
   ];
 
@@ -171,9 +179,12 @@ export default function DashboardPage() {
     if (storedData) {
       try {
         const parsed = JSON.parse(storedData);
-        setAdminName(parsed.name || "Admin");
+        // Try to get the name from various possible field names
+        const name = parsed.fullName || parsed.name || parsed.adminName || "Admin";
+        setAdminName(name);
       } catch (error) {
         console.error("Error parsing admin data:", error);
+        setAdminName("Admin");
       }
     }
 
@@ -203,7 +214,20 @@ export default function DashboardPage() {
     return styles[status as keyof typeof styles] || styles.Pending;
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    setLogoutLoading(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (token) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminData');
     router.push("/");
@@ -222,12 +246,12 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 overflow-hidden">
       <ThreeScene />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col h-full">
         {/* Top Navigation */}
-        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 bg-white/5 backdrop-blur-md border-b border-white/10">
+        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 bg-white/5 backdrop-blur-md border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -254,16 +278,27 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={handleLogout}
-              className="text-xs sm:text-sm text-white/60 hover:text-white transition-colors px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:bg-white/10"
+              disabled={logoutLoading}
+              className="text-xs sm:text-sm text-white/60 hover:text-white transition-colors px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:bg-white/10 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Logout
+              {logoutLoading ? (
+                <svg className="animate-spin h-3.5 w-3.5 text-white/60" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <>
+                  <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Logout
+                </>
+              )}
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row">
-          {/* Sidebar - Desktop */}
-          <div className="hidden lg:block w-56 xl:w-64 border-r border-white/10 p-3 xl:p-4 space-y-1 min-h-[calc(100vh-65px)]">
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Sidebar - Sticky/Fixed */}
+          <div className="hidden lg:block w-56 xl:w-64 border-r border-white/10 bg-gradient-to-b from-blue-950/50 to-indigo-950/50 backdrop-blur-sm flex-shrink-0 overflow-y-auto p-3 xl:p-4 space-y-1">
             {navItems.map((item) => {
               const IconComponent = item.icon;
               return (
@@ -332,17 +367,28 @@ export default function DashboardPage() {
                       setSidebarOpen(false);
                       handleLogout();
                     }}
-                    className="w-full text-sm text-red-400/60 hover:text-red-400 transition-colors px-4 py-2.5 rounded-xl hover:bg-red-500/10 text-left"
+                    disabled={logoutLoading}
+                    className="w-full text-sm text-red-400/60 hover:text-red-400 transition-colors px-4 py-2.5 rounded-xl hover:bg-red-500/10 text-left flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Logout
+                    {logoutLoading ? (
+                      <svg className="animate-spin h-4 w-4 text-red-400/60" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <>
+                        <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                        Logout
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
             </>
           )}
 
-          {/* Main Content */}
-          <div className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
+          {/* Main Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
             {/* Welcome Section */}
             <div className="mb-4 sm:mb-5 md:mb-6">
               <div className="flex items-center justify-between">

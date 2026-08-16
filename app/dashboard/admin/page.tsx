@@ -30,6 +30,10 @@ import {
   ScissorsIcon,
   XMarkIcon,
   Bars3Icon,
+  ArrowRightOnRectangleIcon,
+  UserPlusIcon,
+  TagIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 import ThreeScene from "../../components/ThreeScene";
 
@@ -40,23 +44,36 @@ export default function AdminPage() {
   const [adminData, setAdminData] = useState<any>({});
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     email: "",
-    phone: "",
+    phoneNumber: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [originalFormData, setOriginalFormData] = useState({
+    fullName: "",
+    email: "",
+    phoneNumber: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
-  // Navigation items
+  // Navigation items - Standard left pane
   const navItems = [
     { name: "Dashboard", icon: HomeIcon, href: "/dashboard", current: false },
     { name: "Bookings", icon: CalendarIcon, href: "/dashboard/bookings", current: false },
     { name: "Salons", icon: BuildingOfficeIcon, href: "/dashboard/salons", current: false },
     { name: "Suppliers", icon: TruckIcon, href: "/dashboard/suppliers", current: false },
     { name: "Customers", icon: UserGroupIcon, href: "/dashboard/customers", current: false },
+    { name: "Users", icon: UserPlusIcon, href: "/dashboard/users", current: false },
+    { name: "Categories", icon: TagIcon, href: "/dashboard/categories", current: false },
+    { name: "Subscriptions", icon: CreditCardIcon, href: "/dashboard/subscriptions", current: false },
     { name: "Admin", icon: Cog6ToothIcon, href: "/dashboard/admin", current: true },
   ];
 
@@ -67,6 +84,39 @@ export default function AdminPage() {
     { id: "preferences", label: "Preferences", icon: Cog6ToothIcon },
     { id: "notifications", label: "Notifications", icon: BellIcon },
   ];
+
+  // Fetch profile data from backend
+  const fetchProfile = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+      
+      const response = await fetch("/api/auth/profile", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAdminData(data);
+        const newFormData = {
+          fullName: data.fullName || "Admin User",
+          email: data.email || "admin@krownbraids.com",
+          phoneNumber: data.phoneNumber || "+44 20 1234 5678",
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        };
+        setFormData(newFormData);
+        setOriginalFormData(newFormData);
+        localStorage.setItem('adminData', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error("Fetch profile error:", error);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -80,53 +130,213 @@ export default function AdminPage() {
       try {
         const parsed = JSON.parse(storedData);
         setAdminData(parsed);
-        setFormData({
-          name: parsed.name || "Admin User",
+        const newFormData = {
+          fullName: parsed.fullName || "Admin User",
           email: parsed.email || "admin@krownbraids.com",
-          phone: parsed.phone || "+44 20 1234 5678",
+          phoneNumber: parsed.phoneNumber || "+44 20 1234 5678",
           currentPassword: "",
           newPassword: "",
           confirmPassword: "",
-        });
+        };
+        setFormData(newFormData);
+        setOriginalFormData(newFormData);
       } catch (error) {
         console.error("Error parsing admin data:", error);
       }
     }
     
+    fetchProfile();
     setLoading(false);
   }, [router]);
 
-  const showAlert = (type: 'success' | 'error', message: string) => {
+  const showAlert = (type: 'success' | 'error' | 'info', message: string) => {
     setAlert({ type, message });
     setTimeout(() => setAlert(null), 5000);
   };
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    showAlert('success', 'Profile updated successfully!');
-    setIsEditing(false);
+  const validatePassword = (password: string) => {
+    const errors = [];
+    if (password.length < 8) errors.push("at least 8 characters");
+    if (!/[A-Z]/.test(password)) errors.push("one uppercase letter");
+    if (!/[a-z]/.test(password)) errors.push("one lowercase letter");
+    if (!/[0-9]/.test(password)) errors.push("one number");
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push("one special character");
+    return errors;
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.newPassword !== formData.confirmPassword) {
-      showAlert('error', 'New passwords do not match');
-      return;
-    }
-    if (formData.newPassword.length < 8) {
-      showAlert('error', 'Password must be at least 8 characters');
-      return;
-    }
-    showAlert('success', 'Password changed successfully!');
-    setFormData({
-      ...formData,
+  const handleEditClick = () => {
+    setOriginalFormData({
+      fullName: formData.fullName,
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     });
+    setIsEditing(true);
   };
 
-  const handleLogout = () => {
+  const handleCancelEdit = () => {
+    setFormData({ ...originalFormData });
+    setIsEditing(false);
+  };
+
+  const hasChanges = () => {
+    const nameChanged = formData.fullName !== originalFormData.fullName;
+    const phoneChanged = formData.phoneNumber !== originalFormData.phoneNumber;
+    return nameChanged || phoneChanged;
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!hasChanges()) {
+      showAlert('info', 'No changes to save. Please make a change before saving.');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      const response = await fetch("/api/auth/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          phoneNumber: formData.phoneNumber,
+        }),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        showAlert('error', 'Server error. Please try again.');
+        return;
+      }
+
+      if (response.ok) {
+        showAlert('success', data.message || 'Profile updated successfully!');
+        setIsEditing(false);
+        
+        const updatedData = { 
+          ...adminData, 
+          fullName: formData.fullName, 
+          phoneNumber: formData.phoneNumber 
+        };
+        localStorage.setItem('adminData', JSON.stringify(updatedData));
+        setAdminData(updatedData);
+        setOriginalFormData({ ...formData });
+      } else {
+        showAlert('error', data.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error("Update profile error:", error);
+      if (error instanceof Error && error.message === "Failed to fetch") {
+        showAlert('error', 'Cannot connect to server. Please check your connection.');
+      } else {
+        showAlert('error', 'An unexpected error occurred. Please try again.');
+      }
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (formData.newPassword !== formData.confirmPassword) {
+      showAlert('error', 'New passwords do not match');
+      return;
+    }
+    
+    if (formData.newPassword.length < 8) {
+      showAlert('error', 'Password must be at least 8 characters');
+      return;
+    }
+
+    const passwordErrors = validatePassword(formData.newPassword);
+    if (passwordErrors.length > 0) {
+      showAlert('error', `Password must contain: ${passwordErrors.join(", ")}`);
+      return;
+    }
+
+    setChangePasswordLoading(true);
+    setAlert(null);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          oldPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        }),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        showAlert('error', 'Server error. Please try again later.');
+        setChangePasswordLoading(false);
+        return;
+      }
+
+      if (response.ok) {
+        showAlert('success', data.message || 'Password changed successfully!');
+        setFormData({
+          ...formData,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        setChangePasswordLoading(false);
+      } else {
+        const errorMessage = data.message || data.error || "Failed to change password";
+        showAlert('error', errorMessage);
+        setChangePasswordLoading(false);
+      }
+    } catch (error) {
+      console.error("Change password error:", error);
+      if (error instanceof Error && error.message === "Failed to fetch") {
+        showAlert('error', 'Cannot connect to server. Please check your network connection.');
+      } else {
+        showAlert('error', 'An unexpected error occurred. Please try again.');
+      }
+      setChangePasswordLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setLogoutLoading(true);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      if (token) {
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        if (!response.ok) {
+          console.error("Logout API error:", await response.text());
+        }
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminData');
     router.push("/");
@@ -145,12 +355,12 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-950 overflow-hidden">
       <ThreeScene />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col h-full">
         {/* Top Navigation */}
-        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 bg-white/5 backdrop-blur-md border-b border-white/10">
+        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 bg-white/5 backdrop-blur-md border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -176,16 +386,27 @@ export default function AdminPage() {
             </div>
             <button
               onClick={handleLogout}
-              className="text-xs sm:text-sm text-white/60 hover:text-white transition-colors px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:bg-white/10"
+              disabled={logoutLoading}
+              className="text-xs sm:text-sm text-white/60 hover:text-white transition-colors px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:bg-white/10 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Logout
+              {logoutLoading ? (
+                <svg className="animate-spin h-3.5 w-3.5 text-white/60" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <>
+                  <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Logout
+                </>
+              )}
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row">
-          {/* Sidebar - Desktop */}
-          <div className="hidden lg:block w-56 xl:w-64 border-r border-white/10 p-3 xl:p-4 space-y-1 min-h-[calc(100vh-65px)]">
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Sidebar - Sticky/Fixed */}
+          <div className="hidden lg:block w-56 xl:w-64 border-r border-white/10 bg-gradient-to-b from-blue-950/50 to-indigo-950/50 backdrop-blur-sm flex-shrink-0 overflow-y-auto p-3 xl:p-4 space-y-1">
             {navItems.map((item) => {
               const IconComponent = item.icon;
               return (
@@ -254,22 +475,35 @@ export default function AdminPage() {
                       setSidebarOpen(false);
                       handleLogout();
                     }}
-                    className="w-full text-sm text-red-400/60 hover:text-red-400 transition-colors px-4 py-2.5 rounded-xl hover:bg-red-500/10 text-left"
+                    disabled={logoutLoading}
+                    className="w-full text-sm text-red-400/60 hover:text-red-400 transition-colors px-4 py-2.5 rounded-xl hover:bg-red-500/10 text-left flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Logout
+                    {logoutLoading ? (
+                      <svg className="animate-spin h-4 w-4 text-red-400/60" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <>
+                        <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                        Logout
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
             </>
           )}
 
-          {/* Main Content */}
-          <div className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
+          {/* Main Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
             {/* Alert */}
             {alert && (
               <div className={`mb-4 p-3 rounded-xl flex items-center gap-3 ${
                 alert.type === 'success' 
                   ? 'bg-green-500/20 border border-green-400/30 text-green-400'
+                  : alert.type === 'info'
+                  ? 'bg-blue-500/20 border border-blue-400/30 text-blue-400'
                   : 'bg-red-500/20 border border-red-400/30 text-red-400'
               }`}>
                 {alert.type === 'success' ? (
@@ -288,7 +522,7 @@ export default function AdminPage() {
                   <div className="h-20 w-20 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-blue-500/20">
                     {adminData.name?.charAt(0) || "A"}
                   </div>
-                  <h3 className="text-sm font-semibold text-white mt-3">{adminData.name || "Admin User"}</h3>
+                  <h3 className="text-sm font-semibold text-white mt-3">{adminData.fullName || "Admin User"}</h3>
                   <p className="text-xs text-blue-300/50">{adminData.email || "admin@krownbraids.com"}</p>
                   <div className="mt-2 flex items-center justify-center gap-1">
                     <ShieldCheckIcon className="h-3.5 w-3.5 text-cyan-400" />
@@ -340,8 +574,8 @@ export default function AdminPage() {
                               <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-300/30" />
                               <input
                                 type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                value={formData.fullName}
+                                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                 disabled={!isEditing}
                                 className="w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-10 py-2 sm:py-2.5 text-sm text-white placeholder:text-blue-300/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 disabled:opacity-50"
                               />
@@ -365,8 +599,8 @@ export default function AdminPage() {
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300/30 text-sm">+44</span>
                               <input
                                 type="tel"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                value={formData.phoneNumber}
+                                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                                 disabled={!isEditing}
                                 className="w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl pl-12 pr-3 py-2 sm:py-2.5 text-sm text-white placeholder:text-blue-300/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 disabled:opacity-50"
                               />
@@ -390,7 +624,7 @@ export default function AdminPage() {
                           {!isEditing ? (
                             <button
                               type="button"
-                              onClick={() => setIsEditing(true)}
+                              onClick={handleEditClick}
                               className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm font-medium text-white hover:bg-white/20 transition-colors flex items-center gap-2"
                             >
                               <PencilSquareIcon className="h-4 w-4" />
@@ -407,7 +641,7 @@ export default function AdminPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setIsEditing(false)}
+                                onClick={handleCancelEdit}
                                 className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white/60 hover:text-white transition-colors"
                               >
                                 Cancel
@@ -490,10 +724,23 @@ export default function AdminPage() {
                         </div>
                         <button
                           type="submit"
-                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-sm font-medium text-white shadow-lg hover:shadow-purple-500/30 transition-all hover:scale-[1.02] flex items-center gap-2"
+                          disabled={changePasswordLoading}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-sm font-medium text-white shadow-lg hover:shadow-purple-500/30 transition-all hover:scale-[1.02] flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
-                          <ArrowPathIcon className="h-4 w-4" />
-                          Update Password
+                          {changePasswordLoading ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              <ArrowPathIcon className="h-4 w-4" />
+                              Update Password
+                            </>
+                          )}
                         </button>
                       </form>
                     </div>

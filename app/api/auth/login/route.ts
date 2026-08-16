@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const backendUrl = "https://bcd6-82-36-98-104.ngrok-free.app/api/v1/auth/super-admin/login";
+    const backendUrl = "https://178e-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/login";
     console.log("Calling backend:", backendUrl);
 
     const response = await fetch(backendUrl, {
