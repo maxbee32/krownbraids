@@ -32,6 +32,31 @@ import {
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 import ThreeScene from "../components/ThreeScene";
 
+// Types
+interface Salon {
+  id: number;
+  name: string;
+  ownerId: number;
+  ownerFirstName: string;
+  ownerLastName: string;
+  ownerFullName: string;
+  address: string;
+  city: string;
+  country: string;
+  email: string;
+  phoneNumber: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  website: string;
+  description: string;
+  postalCode: string;
+  state: string;
+  facebook: string;
+  instagram: string;
+  twitter: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -39,6 +64,9 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [salons, setSalons] = useState<Salon[]>([]);
+  const [pendingSalons, setPendingSalons] = useState<Salon[]>([]);
+  const [loadingSalons, setLoadingSalons] = useState(true);
 
   // Navigation items
   const navItems = [
@@ -53,7 +81,49 @@ export default function DashboardPage() {
     { name: "Admin", icon: Cog6ToothIcon, href: "/dashboard/admin", current: false },
   ];
 
-  // Stats data with click handlers
+  // Fetch salons from API
+  const fetchSalons = async () => {
+    try {
+      setLoadingSalons(true);
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        router.push("/");
+        return;
+      }
+
+      const response = await fetch("/api/auth/salon", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch salons');
+      }
+
+      const data = await response.json();
+      
+      // If the response is an array directly
+      const salonData = Array.isArray(data) ? data : data.data || [];
+      
+      setSalons(salonData);
+      
+      // Filter pending salons (status is "PENDING_APPROVAL")
+      const pending = salonData.filter(
+        (salon: Salon) => salon.status === "PENDING_APPROVAL"
+      );
+      
+      setPendingSalons(pending);
+      setLoadingSalons(false);
+    } catch (error) {
+      console.error("Error fetching salons:", error);
+      setLoadingSalons(false);
+    }
+  };
+
+  // Stats data with REAL counts from fetched data
   const stats = [
     {
       title: "Total Bookings",
@@ -66,8 +136,8 @@ export default function DashboardPage() {
     },
     {
       title: "Total Salons",
-      value: "156",
-      change: "+5.2%",
+      value: salons.length.toString(),
+      change: "",
       trend: "up",
       icon: BuildingOfficeIcon,
       color: "from-purple-500 to-pink-500",
@@ -145,13 +215,6 @@ export default function DashboardPage() {
     },
   ];
 
-  // Pending approvals with quick actions
-  const pendingApprovals = [
-    { id: 1, name: "Royal Twist", owner: "Ama Serwaa", type: "Salon Registration", date: "2026-08-06" },
-    { id: 2, name: "Afro Hair Supplies UK", owner: "Kwame Osei", type: "Supplier Registration", date: "2026-08-06" },
-    { id: 3, name: "Braids & Beauty", owner: "Efua Botwe", type: "Salon Registration", date: "2026-08-05" },
-  ];
-
   // Top salons
   const topSalons = [
     { name: "Divine Braids", bookings: 89, rating: 4.8 },
@@ -176,16 +239,28 @@ export default function DashboardPage() {
     }
     
     const storedData = localStorage.getItem('adminData');
+    console.log("Stored admin data:", storedData);
+    
     if (storedData) {
       try {
         const parsed = JSON.parse(storedData);
-        // Try to get the name from various possible field names
-        const name = parsed.fullName || parsed.name || parsed.adminName || "Admin";
-        setAdminName(name);
+        console.log("Parsed admin data:", parsed);
+        
+        // ✅ Same logic as admin page - get the display name from various sources
+        const displayName = parsed.fullName || 
+                           parsed.name || 
+                           parsed.displayName || 
+                           parsed.email?.split('@')[0] || 
+                           "Admin";
+        
+        setAdminName(displayName);
+        console.log("Admin name set to:", displayName);
       } catch (error) {
         console.error("Error parsing admin data:", error);
         setAdminName("Admin");
       }
+    } else {
+      setAdminName("Admin");
     }
 
     // Set current time
@@ -199,6 +274,9 @@ export default function DashboardPage() {
     };
     updateTime();
     const interval = setInterval(updateTime, 60000);
+    
+    // Fetch salons
+    fetchSalons();
     
     setLoading(false);
     return () => clearInterval(interval);
@@ -231,6 +309,48 @@ export default function DashboardPage() {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminData');
     router.push("/");
+  };
+
+  // Render pending approvals from REAL data
+  const renderPendingApprovals = () => {
+    if (loadingSalons) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (pendingSalons.length === 0) {
+      return (
+        <div className="text-center py-6">
+          <CheckCircleIcon className="h-10 w-10 text-green-400 mx-auto mb-2" />
+          <p className="text-sm text-white/60">No pending approvals</p>
+          <p className="text-xs text-blue-300/40">All salons have been reviewed</p>
+        </div>
+      );
+    }
+
+    return pendingSalons.slice(0, 5).map((salon) => (
+      <div key={salon.id} className="flex items-start gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+        <div className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-lg bg-yellow-500/20 flex items-center justify-center text-yellow-400 flex-shrink-0">
+          <ClockIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-white truncate">{salon.name}</p>
+          <p className="text-[10px] sm:text-xs text-blue-300/50 truncate">{salon.ownerFullName || "Unknown"} • Salon Registration</p>
+          <p className="text-[8px] sm:text-[10px] text-blue-300/30">{salon.city || "Unknown location"}</p>
+        </div>
+        <div className="flex gap-0.5 sm:gap-1">
+          <button className="p-0.5 sm:p-1 rounded hover:bg-green-500/20 text-green-400 transition-colors" title="Approve">
+            <CheckCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          </button>
+          <button className="p-0.5 sm:p-1 rounded hover:bg-red-500/20 text-red-400 transition-colors" title="Reject">
+            <XCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          </button>
+        </div>
+      </div>
+    ));
   };
 
   if (loading) {
@@ -274,7 +394,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 rounded-full px-2 sm:px-3 py-1 sm:py-1.5 border border-white/10">
               <UserIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-300/50" />
-              <span className="text-xs sm:text-sm text-white/80 hidden xs:inline">{adminName}</span>
+              <span className="text-xs sm:text-sm text-white/80 hidden xs:inline">{adminName || "Admin"}</span>
             </div>
             <button
               onClick={handleLogout}
@@ -393,10 +513,8 @@ export default function DashboardPage() {
             <div className="mb-4 sm:mb-5 md:mb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Welcome back, {adminName}! 👋</h2>
-                  <p className="text-xs sm:text-sm text-blue-300/60 mt-0.5 sm:mt-1">
-                    Here's what's happening with your salon booking platform today.
-                  </p>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Welcome back, {adminName || "Admin"}! 👋</h2>
+                  
                 </div>
                 <button className="hidden sm:flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl text-xs text-white/80 transition-all">
                   <PlusIcon className="h-4 w-4" />
@@ -420,16 +538,18 @@ export default function DashboardPage() {
                       <div className="min-w-0">
                         <p className="text-[8px] sm:text-[10px] md:text-xs text-blue-300/50 uppercase tracking-wider truncate">{stat.title}</p>
                         <p className="text-base sm:text-lg md:text-2xl font-bold text-white mt-0.5 sm:mt-1">{stat.value}</p>
-                        <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
-                          {stat.trend === "up" ? (
-                            <ArrowTrendingUpIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-400" />
-                          ) : (
-                            <ArrowTrendingDownIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-400" />
-                          )}
-                          <span className={`text-[8px] sm:text-xs ${stat.trend === "up" ? "text-green-400" : "text-red-400"}`}>
-                            {stat.change}
-                          </span>
-                        </div>
+                        {stat.change && stat.change.length > 0 && (
+                          <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
+                            {stat.trend === "up" ? (
+                              <ArrowTrendingUpIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-400" />
+                            ) : (
+                              <ArrowTrendingDownIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-400" />
+                            )}
+                            <span className={`text-[8px] sm:text-xs ${stat.trend === "up" ? "text-green-400" : "text-red-400"}`}>
+                              {stat.change}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className={`rounded-lg sm:rounded-xl bg-gradient-to-br ${stat.color} p-1.5 sm:p-2 shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform`}>
                         <IconComponent className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-white" />
@@ -443,7 +563,7 @@ export default function DashboardPage() {
             {/* Quick Navigation Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-5 md:mb-6">
               {[
-                { name: "Manage Salons", icon: BuildingOfficeIcon, href: "/dashboard/salons", color: "from-purple-500 to-pink-500", count: "156" },
+                { name: "Manage Salons", icon: BuildingOfficeIcon, href: "/dashboard/salons", color: "from-purple-500 to-pink-500", count: salons.length.toString() },
                 { name: "Hair Suppliers", icon: TruckIcon, href: "/dashboard/suppliers", color: "from-amber-500 to-orange-500", count: "89" },
                 { name: "Customers", icon: UserGroupIcon, href: "/dashboard/customers", color: "from-green-500 to-emerald-500", count: "1,284" },
                 { name: "Admin Settings", icon: Cog6ToothIcon, href: "/dashboard/admin", color: "from-blue-500 to-cyan-500", count: "⚙️" },
@@ -521,37 +641,25 @@ export default function DashboardPage() {
 
               {/* Right Sidebar */}
               <div className="space-y-3 sm:space-y-4 md:space-y-6">
-                {/* Pending Approvals */}
+                {/* Pending Approvals - NOW WITH REAL DATA */}
                 <div className="bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/10 p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-3 sm:mb-4">
                     <h3 className="text-xs sm:text-sm font-semibold text-white">Pending Approvals</h3>
-                    <span className="text-[10px] sm:text-xs text-yellow-400 bg-yellow-500/20 px-1.5 sm:px-2 py-0.5 rounded-full animate-pulse">3</span>
+                    <span className="text-[10px] sm:text-xs text-yellow-400 bg-yellow-500/20 px-1.5 sm:px-2 py-0.5 rounded-full animate-pulse">
+                      {pendingSalons.length}
+                    </span>
                   </div>
                   <div className="space-y-2 sm:space-y-3">
-                    {pendingApprovals.map((item) => (
-                      <div key={item.id} className="flex items-start gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
-                        <div className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-lg bg-yellow-500/20 flex items-center justify-center text-yellow-400 flex-shrink-0">
-                          <ClockIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-white truncate">{item.name}</p>
-                          <p className="text-[10px] sm:text-xs text-blue-300/50 truncate">{item.owner} • {item.type}</p>
-                          <p className="text-[8px] sm:text-[10px] text-blue-300/30">{item.date}</p>
-                        </div>
-                        <div className="flex gap-0.5 sm:gap-1">
-                          <button className="p-0.5 sm:p-1 rounded hover:bg-green-500/20 text-green-400 transition-colors" title="Approve">
-                            <CheckCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          </button>
-                          <button className="p-0.5 sm:p-1 rounded hover:bg-red-500/20 text-red-400 transition-colors" title="Reject">
-                            <XCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                    {renderPendingApprovals()}
                   </div>
-                  <button className="mt-2 sm:mt-3 w-full text-center text-[10px] sm:text-xs text-blue-300/50 hover:text-white transition-colors">
-                    View All Approvals →
-                  </button>
+                  {pendingSalons.length > 0 && (
+                    <Link 
+                      href="/dashboard/salons?status=pending" 
+                      className="mt-3 block w-full text-center text-[10px] sm:text-xs text-blue-300/50 hover:text-white transition-colors"
+                    >
+                      View All Pending Salons →
+                    </Link>
+                  )}
                 </div>
 
                 {/* Top Salons */}

@@ -40,6 +40,18 @@ export default function Home() {
     }, 5000);
   };
 
+  // Helper function to decode JWT token
+  const decodeToken = (token: string) => {
+    try {
+      const payload = token.split('.')[1];
+      const decoded = atob(payload);
+      return JSON.parse(decoded);
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      return null;
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -83,13 +95,60 @@ export default function Home() {
           return;
         }
         
+        // ✅ Try to get the admin name from various sources
+        let adminName = "Admin";
+        let firstName = "";
+        let lastName = "";
+        
+        // 1. Check if the response has user data
         const userData = data.user || data.data?.user || {};
-        userData.passwordChangeRequired = data.passwordChangeRequired || false;
-        localStorage.setItem('adminData', JSON.stringify(userData));
+        
+        // 2. Try to get name from response
+        if (userData.fullName) {
+          adminName = userData.fullName;
+        } else if (userData.name) {
+          adminName = userData.name;
+        } else if (userData.firstName && userData.lastName) {
+          adminName = userData.firstName + " " + userData.lastName;
+          firstName = userData.firstName;
+          lastName = userData.lastName;
+        } else if (userData.firstName) {
+          adminName = userData.firstName;
+          firstName = userData.firstName;
+        } else if (userData.lastName) {
+          adminName = userData.lastName;
+          lastName = userData.lastName;
+        }
+        
+        // 3. If still no name, try to decode the token
+        if (adminName === "Admin") {
+          const decodedToken = decodeToken(data.token);
+          if (decodedToken) {
+            if (decodedToken.fullName) {
+              adminName = decodedToken.fullName;
+            } else if (decodedToken.name) {
+              adminName = decodedToken.name;
+            } else if (decodedToken.sub) {
+              // Use the email part as name
+              const emailPart = decodedToken.sub.split('@')[0];
+              adminName = emailPart || "Admin";
+            }
+          }
+        }
+        
+        // 4. Store the admin data
+        localStorage.setItem('adminData', JSON.stringify({
+          fullName: adminName,
+          firstName: firstName || userData.firstName || "",
+          lastName: lastName || userData.lastName || "",
+          email: userData.email || data.email || email,
+          role: userData.role || data.role || "SUPER_ADMIN",
+          passwordChangeRequired: data.passwordChangeRequired || userData.passwordChangeRequired || false,
+        }));
         
         showAlert('success', 'Login successful! Redirecting...');
         
-        if (data.passwordChangeRequired) {
+        if (data.passwordChangeRequired || userData.passwordChangeRequired) {
           setTimeout(() => {
             router.push("/change-password");
           }, 1500);
