@@ -27,7 +27,6 @@ import {
   CreditCardIcon,
   Bars3Icon,
   XMarkIcon,
-  SaveIcon,
 } from "@heroicons/react/24/outline";
 import ThreeScene from "../../../../components/ThreeScene";
 
