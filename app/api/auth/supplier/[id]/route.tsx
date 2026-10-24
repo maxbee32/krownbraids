@@ -8,7 +8,7 @@ const BACKEND_URL =
 // GET one supplier (by supplier ID, not business ID)
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // ← params is now a Promise
 ) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;  // ← await it before using
 
     const response = await fetch(
       `${BACKEND_URL}/admin/suppliers/${id}`,
