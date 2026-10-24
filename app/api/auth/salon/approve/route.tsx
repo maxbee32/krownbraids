@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const backendUrl = `https://f6f8-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/salons/${salonId}/approve`;
+    const backendUrl = `https://899a-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/salons/${salonId}/approve`;
 
     const response = await fetch(backendUrl, {
       method: "PUT",

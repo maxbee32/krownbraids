@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     console.log("Sending change password request to backend...");
 
     const response = await fetch(
-      "https://f6f8-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/change-password",
+      "https://899a-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/change-password",
       {
         method: "POST",
         headers: {

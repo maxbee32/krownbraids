@@ -90,6 +90,8 @@ export default function SubscriptionsPage() {
     { name: "Users", icon: UserPlusIcon, href: "/dashboard/users", current: false },
     { name: "Categories", icon: TagIcon, href: "/dashboard/categories", current: false },
     { name: "Subscriptions", icon: CreditCardIcon, href: "/dashboard/subscriptions", current: true },
+    { name: "Supplier Plans", icon: TruckIcon, href: "/dashboard/supplier-subscriptions", current: false },
+
     { name: "Admin", icon: Cog6ToothIcon, href: "/dashboard/admin", current: false },
   ];
 
