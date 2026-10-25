@@ -11,6 +11,7 @@ import {
   Building,
   CreditCard,
   Calendar,
+  TriangleAlert,
 } from "lucide-react";
 
 export interface SupplierWithStatus {
@@ -202,7 +203,7 @@ export function SupplierDetailDrawer({
                 {drawerAlert.type === "success" ? (
                   <CheckCircle className="h-5 w-5 flex-shrink-0" />
                 ) : (
-                  <ExclamationTriangle className="h-5 w-5 flex-shrink-0" />
+                  <TriangleAlert className="h-5 w-5 flex-shrink-0" />
                 )}
                 <span className="text-sm flex-1">{drawerAlert.message}</span>
                 <button
