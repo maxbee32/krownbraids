@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 
 const BACKEND_URL =
-  "https://899a-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/profile";
+  "https://4ef0-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/profile";
 
 // GET - Fetch admin profile
 export async function GET(request: Request) {
