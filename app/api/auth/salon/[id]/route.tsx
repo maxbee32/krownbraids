@@ -32,7 +32,7 @@ export async function GET(
     const token = authHeader.substring(7);
     console.log("Token provided:", token.substring(0, 20) + "...");
 
-    const backendUrl = `https://9277-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/salons/${id}`;
+    const backendUrl = `https://9125-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/salons/${id}`;
     console.log("Calling backend:", backendUrl);
 
     const response = await fetch(backendUrl, {
