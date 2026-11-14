@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     const backendUrl =
 
-      "https://9125-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/logout";
+      "https://6fbc-82-36-98-104.ngrok-free.app/aservice/api/v1/auth/super-admin/logout";
 
 
 
